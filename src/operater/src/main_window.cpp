@@ -31,6 +31,9 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
 {
     ui.setupUi(this);
 
+    this->setMaximumSize(497,320);
+    this->setMinimumSize(497,320);
+
     qnode.setRosInitArg(argc,argv);
 
     //ReadSettings();
@@ -49,6 +52,10 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
     ui.plainTextEdit_recordRoadCurrentSettings->setReadOnly(true);
     ui.pushButton_recordPath->setDisabled(true);
     ui.pushButton_toDriverlessPage->setEnabled(false);
+
+    path_info.maxOffset_left = 0.0;
+    path_info.maxOffset_right = 0.0;
+    path_info.traffic_sign = little_ant_msgs::PathInfo::_NONE;
 }
 
 MainWindow::~MainWindow() {}
@@ -119,7 +126,8 @@ void operater::MainWindow::on_pushButton_startRecordPathMsg_clicked(bool checked
 {
   if(ui.pushButton_startRecordPathMsg->text() == "Stop")
   {
-    system("rosnode kill /record_data_node");
+    system("rosnode kill /record_gps_data");
+    system("rosnode kill /novatel_node");
     ui.pushButton_startRecordPathMsg->setText("Start");
     ui.lineEdit_pathMSgFileName->setDisabled(false);
     return;
@@ -127,6 +135,12 @@ void operater::MainWindow::on_pushButton_startRecordPathMsg_clicked(bool checked
 
   if(!is_OffsetValid())
     return;
+
+  std::string leftOffset_str = ui.lineEdit_maxOffset_left->text().toStdString();
+  if(leftOffset_str.substr(0,1) != "-")
+    leftOffset_str = std::string("-") + leftOffset_str;
+  ui.lineEdit_maxOffset_left->setText(QString::fromStdString(leftOffset_str));
+
 
   std::string file_name = ui.lineEdit_pathMSgFileName->text().toStdString();
   if(file_name.empty())
@@ -150,7 +164,7 @@ void operater::MainWindow::on_pushButton_startRecordPathMsg_clicked(bool checked
   if(index != 0)
     file_name = file_name.substr(index);
 
-  printf("1:%s\n",file_name.c_str());
+  //printf("1:%s\n",file_name.c_str());
 
   ui.lineEdit_pathMSgFileName->setText(QString::fromStdString(file_name));
 
@@ -160,8 +174,6 @@ void operater::MainWindow::on_pushButton_startRecordPathMsg_clicked(bool checked
   cmd_ss << "initial_maxOffset_left:=" << ui.lineEdit_maxOffset_left->text().toStdString()<<" ";
   cmd_ss << "initial_maxOffset_right:=" << ui.lineEdit_maxOffset_right->text().toStdString()<<" ";
   cmd_ss << "traffic_sign:=" << ui.comboBox_trfficSigns->currentIndex();
-
-  showRecordRoadCurrentSettings();
 
   system(cmd_ss.str().c_str());
 
@@ -174,11 +186,16 @@ void operater::MainWindow::showRecordRoadCurrentSettings()
   ui.plainTextEdit_recordRoadCurrentSettings->clear();
   ui.plainTextEdit_recordRoadCurrentSettings->appendPlainText("file name: "+
                                                               ui.lineEdit_pathMSgFileName->text());
-  ui.plainTextEdit_recordRoadCurrentSettings->appendPlainText("left  maximun offset: "+
-                                                         ui.lineEdit_maxOffset_left->text());
-  ui.plainTextEdit_recordRoadCurrentSettings->appendPlainText("right maximun offset: "+
-                                                         ui.lineEdit_maxOffset_right->text());
-  ui.plainTextEdit_recordRoadCurrentSettings->appendPlainText("traffic sign:: "+
+  std::stringstream ss("");
+  ss << "left   maximun offset: " << path_info.maxOffset_left;
+  ui.plainTextEdit_recordRoadCurrentSettings->appendPlainText(QString::fromStdString(ss.str()));
+
+  ss.str("");
+
+  ss << "right  maximun offset: " << path_info.maxOffset_right;
+  ui.plainTextEdit_recordRoadCurrentSettings->appendPlainText(QString::fromStdString(ss.str()));
+
+  ui.plainTextEdit_recordRoadCurrentSettings->appendPlainText("traffic sign: "+
                                                          ui.comboBox_trfficSigns->currentText());
 }
 
@@ -187,25 +204,30 @@ void operater::MainWindow::on_pushButton_setRoadWidth_clicked()
   if(!is_OffsetValid())
     return;
 
+  std::string leftOffset_str = ui.lineEdit_maxOffset_left->text().toStdString();
+  if(leftOffset_str.substr(0,1) != "-")
+    leftOffset_str = std::string("-") + leftOffset_str;
+  ui.lineEdit_maxOffset_left->setText(QString::fromStdString(leftOffset_str));
+
+
   float left = ui.lineEdit_maxOffset_left->text().toFloat();
   float right = ui.lineEdit_maxOffset_right->text().toFloat();
 
   QMessageBox msgBox(this);
-  msgBox.setText("The settings is modified.");
+  msgBox.setText("left: "+ui.lineEdit_maxOffset_left->text() + "\tright: "+ui.lineEdit_maxOffset_right->text());
   msgBox.setInformativeText("Confirm the settings?");
   msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
   msgBox.setDefaultButton(QMessageBox::Yes);
   if(msgBox.exec() == QMessageBox::No)
     return ;
-  showRecordRoadCurrentSettings();
 
-  little_ant_msgs::PathInfo path_info;
-  path_info.maxOffset_left = -fabs(left);
+  path_info.maxOffset_left = left;
   path_info.maxOffset_right = right;
 
   qnode.setPathInfo(path_info);
 
   Q_EMIT publishPathInfo_signal();
+  showRecordRoadCurrentSettings();
 
    //printf("%f\t%f\n",left,right);
 }
@@ -262,6 +284,9 @@ void operater::MainWindow::on_pushButton_startNode_clicked(bool checked)
   }
   qnode.stopNode();
   ui.pushButton_startNode->setText("Start Node");
+
+  ui.pushButton_recordPath->setDisabled(true);
+  ui.pushButton_toDriverlessPage->setEnabled(false);
 }
 
 void operater::MainWindow::on_pushButton_recordPath_clicked()
@@ -300,4 +325,30 @@ void operater::MainWindow::on_pushButton_toDriverlessPage_clicked()
 void operater::MainWindow::on_pushButton_homeP2_clicked()
 {
      ui.stackedWidget->setCurrentIndex(0);
+}
+
+void operater::MainWindow::on_comboBox_trfficSigns_currentIndexChanged(int index)
+{
+  static int lastIndex = 0;
+
+  if(index == lastIndex) return;
+
+  QMessageBox msgBox(this);
+  msgBox.setText("modify traffic sign :");
+  msgBox.setInformativeText(ui.comboBox_trfficSigns->currentText() + "?");
+  msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+  msgBox.setDefaultButton(QMessageBox::Yes);
+  if(msgBox.exec() == QMessageBox::No)
+  {
+    ui.comboBox_trfficSigns->setCurrentIndex(lastIndex);
+    return ;
+  }
+
+  path_info.traffic_sign = index;
+
+  qnode.setPathInfo(path_info);
+
+  Q_EMIT publishPathInfo_signal();
+  showRecordRoadCurrentSettings();
+  lastIndex = index;
 }

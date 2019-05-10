@@ -50,6 +50,7 @@ private:
 private:
 	Ui::MainWindowDesign ui;
 	QNode qnode;
+  little_ant_msgs::PathInfo path_info;
 
 Q_SIGNALS:
     void publishPathInfo_signal();
@@ -62,6 +63,8 @@ public Q_SLOTS:
     void on_pushButton_toDriverlessPage_clicked();
 
     void on_pushButton_homeP2_clicked();
+
+    void on_comboBox_trfficSigns_currentIndexChanged(int index);
 };
 
 }  // namespace operater
