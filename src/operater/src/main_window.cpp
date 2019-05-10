@@ -48,6 +48,7 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
     ui.listView_systemLog->setAlternatingRowColors(true);
     ui.plainTextEdit_recordRoadCurrentSettings->setReadOnly(true);
     ui.pushButton_recordPath->setDisabled(true);
+    ui.pushButton_toDriverlessPage->setEnabled(false);
 }
 
 MainWindow::~MainWindow() {}
@@ -217,7 +218,7 @@ bool operater::MainWindow::is_OffsetValid()
   if(ui.lineEdit_maxOffset_left->text().isEmpty() ||
      ui.lineEdit_maxOffset_right->text().isEmpty())
   {
-    ui.statusBar->showMessage("error: input empty!!!");
+    ui.statusBar->showMessage("error: input empty!!!",3000);
   }
   else if((ui.lineEdit_maxOffset_left->text() != "0" && left == 0) ||
     (ui.lineEdit_maxOffset_right->text() != "0" && right == 0))
@@ -245,6 +246,8 @@ void operater::MainWindow::on_pushButton_startNode_clicked(bool checked)
     }
     ui.pushButton_startNode->setText("Stop Node");
     ui.statusBar->showMessage("operator node started.",3000);
+    ui.pushButton_recordPath->setEnabled(true);
+    ui.pushButton_toDriverlessPage->setEnabled(true);
     return;
   }
   QMessageBox msgBox(this);
@@ -275,4 +278,26 @@ void operater::MainWindow::on_pushButton_recordPath_clicked()
 void operater::MainWindow::on_pushButton_home_clicked()
 {
     ui.stackedWidget->setCurrentIndex(0);
+}
+
+void operater::MainWindow::on_pushButton_startDriverless_clicked()
+{
+    //start all node about driverless
+  std::string prefix = "gnome-terminal ";
+  std::string driverless_cmd = "roslaunch little_ant driverless ";
+  std::string lidar_cmd = "roslaunch hesai p40p.launch ";
+  std::string cluster_cmd = "roslaunch euclidean_cluster  euclidean_cluster .launch ";
+
+  system((prefix + " -tab -e \"" + lidar_cmd +"\" -tab -e \"" + cluster_cmd +"\"").c_str());
+
+}
+
+void operater::MainWindow::on_pushButton_toDriverlessPage_clicked()
+{
+    ui.stackedWidget->setCurrentIndex(2);
+}
+
+void operater::MainWindow::on_pushButton_homeP2_clicked()
+{
+     ui.stackedWidget->setCurrentIndex(0);
 }

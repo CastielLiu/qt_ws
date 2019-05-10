@@ -56,6 +56,12 @@ Q_SIGNALS:
 
 public Q_SLOTS:
     void on_pushButton_home_clicked();
+
+    void on_pushButton_startDriverless_clicked();
+
+    void on_pushButton_toDriverlessPage_clicked();
+
+    void on_pushButton_homeP2_clicked();
 };
 
 }  // namespace operater
