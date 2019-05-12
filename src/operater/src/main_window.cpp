@@ -234,15 +234,18 @@ void operater::MainWindow::on_pushButton_setRoadWidth_clicked()
 
 bool operater::MainWindow::is_OffsetValid()
 {
-  float left = ui.lineEdit_maxOffset_left->text().toFloat();
-  float right = ui.lineEdit_maxOffset_right->text().toFloat();
+  QString left_qstr = ui.lineEdit_maxOffset_left->text();
+  QString right_qstr = ui.lineEdit_maxOffset_right->text();
 
-  if(ui.lineEdit_maxOffset_left->text().isEmpty() ||
-     ui.lineEdit_maxOffset_right->text().isEmpty())
+  float left = left_qstr.toFloat();
+  float right = right_qstr.toFloat();
+
+  if(left_qstr.isEmpty() ||
+     right_qstr.isEmpty())
   {
     ui.statusBar->showMessage("error: input empty!!!",3000);
   }
-  else if((ui.lineEdit_maxOffset_left->text() != "0" && left == 0) ||
+  else if(((left_qstr != "0" && left_qstr != "-0")  && left == 0) ||
     (ui.lineEdit_maxOffset_right->text() != "0" && right == 0))
   {
     ui.statusBar->showMessage("error: input error!!!");
